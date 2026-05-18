@@ -11,10 +11,10 @@ local IS_MOBILE = MONET_VERSION ~= nil
 
 -- ====================== GITHUB ======================
 local GITHUB = {
-    user = "“¬Œ…_Õ» _Õ¿_GITHUB",        -- ? »«Ã≈Õ»!
-    repo = "Defency-Helper",
+    user = "AlexWright55",        -- ? »«Ã≈Õ»!
+    repo = "Defency-Helper-Test",
     branch = "main",
-    base_url = "https://raw.githubusercontent.com/“¬Œ…_Õ» _Õ¿_GITHUB/Defency-Helper/main/"
+    base_url = "https://raw.githubusercontent.com/AlexWright55/Defency-Helper-Test/main/"
 }
 
 print('Defency Helper | «‡ÔÛÒÍ v' .. thisScript().version)
