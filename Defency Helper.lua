@@ -11,10 +11,10 @@ print('Defency Helper | Çàïóñê v' .. thisScript().version)
 
 -- ====================== GITHUB ======================
 local GITHUB = {
-    user = "ÒÂÎÉ_ÍÈÊ_ÍÀ_GITHUB",
-    repo = "Defency-Helper",
+    user = "AlexWright55",
+    repo = "Defency-Helper-Test",
     branch = "main",
-    base_url = "https://raw.githubusercontent.com/ÒÂÎÉ_ÍÈÊ_ÍÀ_GITHUB/Defency-Helper/main/"
+    base_url = "https://raw.githubusercontent.com/AlexWright55/Defency-Helper-Test/main/"
 }
 
 -- ====================== ÃËÎÁÀËÜÍÛÉ ÎÁÚÅÊÒ ======================
