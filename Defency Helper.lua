@@ -10,20 +10,13 @@ local u8 = require('encoding').UTF8
 local imgui = require('mimgui')
 
 local root_dir = getWorkingDirectory():gsub('\\', '/')
-local lib_dir = root_dir .. "/lib/DefencyHelper"           -- код
-local data_dir = root_dir .. "/DefencyHelper"              -- пользовательские данные
+local lib_dir = root_dir .. "/lib/DefencyHelper"
+local data_dir = root_dir .. "/DefencyHelper"
 
 print(u8("Defency Helper | Запуск v") .. thisScript().version)
 
 -- ====================== GITHUB ======================
-local GITHUB_BASE = "http://alexwright55.github.io/Defency-Helper-test/lib/"
-
--- ====================== ОКНО ОБНОВЛЕНИЯ ======================
-local UpdateWindow = {
-    Window = imgui.new.bool(false),
-    new_version = "",
-    changelog = ""
-}
+local GITHUB_BASE = "https://alexwright55.github.io/Defency-Helper-test/lib/"
 
 -- ====================== ЗАГРУЗКА ======================
 local function safe_load(path)
@@ -51,51 +44,33 @@ Defency = {
     UI = {}
 }
 
--- Загрузка модулей из lib
 Defency.Config  = safe_load("lib.DefencyHelper.config")
 Defency.Utils   = safe_load("lib.DefencyHelper.utils")
 Defency.Themes  = safe_load("lib.DefencyHelper.themes")
 Defency.Debug   = safe_load("lib.DefencyHelper.debug")
 
--- Modules
 local modules = {"commands", "rp_guns", "departament", "piemenu", "smart_rptp", "unit_management"}
 for _, name in ipairs(modules) do
     Defency[name:gsub("^%l", string.upper)] = safe_load("lib.DefencyHelper.modules." .. name)
 end
 
--- UI
 local ui_files = {"helpers", "main_menu", "binder", "fastmenu", "leader_fastmenu", "unit_window", 
-                  "unit_management_dialog", "unit_playerlist", "departament", "update"}
+                  "unit_management_dialog", "unit_playerlist", "departament", "update", "first_setup"}
 for _, name in ipairs(ui_files) do
     Defency.UI[name:gsub("^%l", string.upper)] = safe_load("lib.DefencyHelper.ui." .. name)
-end
-
--- ====================== ПРОВЕРКА ОБНОВЛЕНИЙ ======================
-local function check_for_update()
-    local url = GITHUB_BASE .. "version.json"
-    downloadUrlToFile(url, data_dir .. "/version.json", function(success)
-        if not success then return end
-
-        local f = io.open(data_dir .. "/version.json", "r")
-        if not f then return end
-        local content = f:read("*a")
-        f:close()
-
-        local ok, data = pcall(decodeJson, content)
-        if ok and data and data.version and data.version ~= thisScript().version then
-            if Defency.UI.Update then
-                Defency.UI.Update.Show(data.version, data.changelog or "Обновление")
-            end
-        end
-    end)
 end
 
 -- ====================== MAIN ======================
 function main()
     while not isSampAvailable() do wait(100) end
 
-    if Defency.Config then Defency.Config.Load() end
-    if Defency.Themes then Defency.Themes.ApplyCurrent() end
+    if Defency.Config then
+        Defency.Config.Load()   -- здесь будет проверка и запуск первого запуска
+    end
+
+    if Defency.Themes then 
+        Defency.Themes.ApplyCurrent() 
+    end
 
     check_for_update()
 
@@ -113,7 +88,6 @@ imgui.OnInitialize(function()
     end
 end)
 
--- Регистрация окон
 for name, mod in pairs(Defency.UI) do
     if mod and mod.Window and mod.Draw then
         imgui.OnFrame(function() return mod.Window[0] end, mod.Draw)

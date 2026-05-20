@@ -1,35 +1,27 @@
--- config.lua
+-- =============================================
+-- config.lua — Работа с пользовательскими настройками
+-- =============================================
+
 local M = {}
 
-local config_dir = getWorkingDirectory():gsub('\\', '/') .. '/Defency Helper'
+local config_dir = Defency.data_dir or (getWorkingDirectory():gsub('\\', '/') .. "/DefencyHelper")
 local settings_path = config_dir .. "/Settings.json"
 
 M.default_settings = {
     general = {
-        version = "v1.2.0",
-        author = 'Flip Anderson',
-        uid = 0,
+        version = thisScript().version,
+        helper_theme = 0,
         custom_dpi = 1.0,
-        autofind_dpi = false,
-        helper_theme = 0,                    -- 0 = MoonMonet, 1 = Dark, 2 = White и т.д.
+        autofind_dpi = true,
         message_color = 40703,
-        moonmonet_theme_color = 12434877,
-        fraction_mode = '',
-        bind_mainmenu = '[113]',             -- F2
-        bind_fastmenu = '[69]',              -- E
-        bind_leader_fastmenu = '[71]',       -- G
-        bind_action = '[13]',                -- Enter
-        bind_command_stop = '[123]',         -- F12
+        fraction_mode = "none",
+        bind_mainmenu = '[113]',        -- F2
+        bind_fastmenu = '[69]',         -- E
+        bind_leader_fastmenu = '[71]',  -- G
         piemenu = true,
-        mobile_fastmenu_button = true,
-        mobile_stop_button = true,
         cruise_control = true,
-        auto_uninvite = false,
-        ping = true,
         rp_guns = true,
-        auto_accept_docs = true,
-        clear_chat = true,
-        use_info_menu = false
+        moonmonet_theme_color = 12434877,
     },
     player_info = {
         nick = '',
@@ -41,40 +33,93 @@ M.default_settings = {
         sex = 'Мужчина',
         accent_enable = true,
         accent = '[Иностранный акцент]:',
-        rp_chat = true
+    },
+    md = {
+        auto_doklad_damage = false,
+        auto_door = false,
+        auto_doklad_post = false,
+        auto_mask = false,
     },
     windows_pos = {
-        pie = {x = 0, y = 0},
-        patrool_menu = {x = 0, y = 0},
-        post_menu = {x = 0, y = 0},
-        mobile_fastmenu_button = {x = 0, y = 0},
-        taser = {x = 0, y = 0},
-        help = {x = 0, y = 0}
-    },
-    time_hud = false,
-    display_map_distance = {user = false, server = false},
-    systems_settings = {
-        new_windows = {
-            enabled = {
-                dialog_unit = false,
-                dialog_unit_playerlist = false
-            }
-        }
+        pie = {x = 800, y = 400},
     }
 }
 
 M.settings = {}
 
--- ====================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ======================
-function M.GetModulePath(module_name)
-    return config_dir .. "/" .. module_name:gsub("^%l", string.upper) .. ".json"
-end
-
-local function ensure_directory()
+function M.Load()
     if not doesDirectoryExist(config_dir) then
         createDirectory(config_dir)
     end
+
+    if not doesFileExist(settings_path) then
+        print(u8("Defency Helper | Первый запуск. Создаём настройки..."))
+        M.settings = M.default_settings
+        M.Save()
+
+        -- Запускаем окно первоначальной настройки
+        if Defency and Defency.UI and Defency.UI.FirstSetup then
+            lua_thread.create(function()
+                wait(500)
+                Defency.UI.FirstSetup.Show()
+            end)
+        end
+        return
+    end
+
+    -- Загрузка существующего конфига
+    local f = io.open(settings_path, "r")
+    if f then
+        local content = f:read("*a")
+        f:close()
+
+        local ok, loaded = pcall(decodeJson, content)
+        if ok and loaded then
+            M.settings = loaded
+            print(u8("Defency Helper | Настройки загружены"))
+        else
+            print(u8("Defency Helper | Ошибка чтения настроек. Используем стандартные."))
+            M.settings = M.default_settings
+        end
+    else
+        M.settings = M.default_settings
+    end
+
+    -- Merge с дефолтными настройками (на случай обновления)
+    M.MergeDefaults()
 end
 
--- ====================== ОСНОВНЫЕ ФУНКЦИИ ======================
-function M.Load()
+function M.Save()
+    if not M.settings then return end
+
+    local f = io.open(settings_path, "w")
+    if f then
+        local content = encodeJson(M.settings)
+        if content then
+            f:write(content)
+            f:close()
+            -- print(u8("Настройки сохранены")) -- можно раскомментировать для отладки
+        else
+            f:close()
+            print(u8("Ошибка кодирования JSON при сохранении настроек"))
+        end
+    else
+        print(u8("Не удалось сохранить Settings.json"))
+    end
+end
+
+-- Объединение с дефолтными настройками (при обновлении скрипта)
+function M.MergeDefaults()
+    local function merge(src, dst)
+        for k, v in pairs(src) do
+            if type(v) == "table" and type(dst[k]) == "table" then
+                merge(v, dst[k])
+            elseif dst[k] == nil then
+                dst[k] = v
+            end
+        end
+    end
+    merge(M.default_settings, M.settings)
+end
+
+return M
