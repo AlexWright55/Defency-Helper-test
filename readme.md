@@ -1,1 +1,1 @@
-[Test](/DefencyHelper/version.json)
+[Test](/lib/version.json)
