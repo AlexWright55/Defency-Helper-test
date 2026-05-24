@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мой проект</title>
+    <title>РњРѕР№ РїСЂРѕРµРєС‚</title>
     <style>
         :root {
             --bg: #0f0f1a;
@@ -31,7 +31,7 @@
             padding: 2rem;
         }
 
-        /* Заголовок */
+        /* Р—Р°РіРѕР»РѕРІРѕРє */
         header {
             text-align: center;
             padding: 4rem 0 2rem;
@@ -71,7 +71,7 @@
             font-size: 1.1rem;
         }
 
-        /* Карточки */
+        /* РљР°СЂС‚РѕС‡РєРё */
         .cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -110,7 +110,7 @@
             line-height: 1.6;
         }
 
-        /* Кнопки */
+        /* РљРЅРѕРїРєРё */
         .buttons {
             display: flex;
             gap: 1rem;
@@ -152,7 +152,7 @@
             background: rgba(124, 58, 237, 0.1);
         }
 
-        /* Статус */
+        /* РЎС‚Р°С‚СѓСЃ */
         .status {
             display: flex;
             align-items: center;
@@ -175,7 +175,7 @@
             50% { opacity: 0.4; }
         }
 
-        /* Подвал */
+        /* РџРѕРґРІР°Р» */
         footer {
             text-align: center;
             padding: 2rem;
@@ -192,43 +192,43 @@
 <body>
     <div class="container">
         <header>
-            <div class="avatar">??</div>
-            <h1>Мой проект</h1>
-            <p class="subtitle">Красивый лендинг на GitHub Pages</p>
+            <div class="avatar">рџљЂ</div>
+            <h1>РњРѕР№ РїСЂРѕРµРєС‚</h1>
+            <p class="subtitle">РљСЂР°СЃРёРІС‹Р№ Р»РµРЅРґРёРЅРі РЅР° GitHub Pages</p>
         </header>
 
         <div class="status">
             <span class="status-dot"></span>
-            Активная разработка
+            РђРєС‚РёРІРЅР°СЏ СЂР°Р·СЂР°Р±РѕС‚РєР°
         </div>
 
         <div class="cards">
             <div class="card">
-                <div class="card-icon">?</div>
-                <h3>Быстрый</h3>
-                <p>Оптимизированная загрузка и высокая производительность из коробки.</p>
+                <div class="card-icon">вљЎ</div>
+                <h3>Р‘С‹СЃС‚СЂС‹Р№</h3>
+                <p>РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅР°СЏ Р·Р°РіСЂСѓР·РєР° Рё РІС‹СЃРѕРєР°СЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ РёР· РєРѕСЂРѕР±РєРё.</p>
             </div>
             <div class="card">
-                <div class="card-icon">??</div>
-                <h3>Стильный</h3>
-                <p>Современный дизайн с градиентами, анимациями и тёмной темой.</p>
+                <div class="card-icon">рџЋЁ</div>
+                <h3>РЎС‚РёР»СЊРЅС‹Р№</h3>
+                <p>РЎРѕРІСЂРµРјРµРЅРЅС‹Р№ РґРёР·Р°Р№РЅ СЃ РіСЂР°РґРёРµРЅС‚Р°РјРё, Р°РЅРёРјР°С†РёСЏРјРё Рё С‚С‘РјРЅРѕР№ С‚РµРјРѕР№.</p>
             </div>
             <div class="card">
-                <div class="card-icon">??</div>
-                <h3>Надёжный</h3>
-                <p>Бесплатный хостинг от GitHub с автоматическим HTTPS.</p>
+                <div class="card-icon">рџ”’</div>
+                <h3>РќР°РґС‘Р¶РЅС‹Р№</h3>
+                <p>Р‘РµСЃРїР»Р°С‚РЅС‹Р№ С…РѕСЃС‚РёРЅРі РѕС‚ GitHub СЃ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёРј HTTPS.</p>
             </div>
         </div>
 
         <div class="buttons">
-            <a href="https://github.com" class="btn btn-primary">? На GitHub</a>
-            <a href="#" class="btn btn-outline">?? Документация</a>
-            <a href="#" class="btn btn-outline">?? Контакты</a>
+            <a href="https://github.com" class="btn btn-primary">в­ђ РќР° GitHub</a>
+            <a href="#" class="btn btn-outline">рџ“– Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ</a>
+            <a href="#" class="btn btn-outline">рџ’¬ РљРѕРЅС‚Р°РєС‚С‹</a>
         </div>
     </div>
 
     <footer>
-        Сделано с ?? на <a href="https://pages.github.com">GitHub Pages</a>
+        РЎРґРµР»Р°РЅРѕ СЃ вќ¤пёЏ РЅР° <a href="https://pages.github.com">GitHub Pages</a>
     </footer>
 </body>
 </html>
