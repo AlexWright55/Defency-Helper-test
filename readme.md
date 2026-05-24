@@ -36,7 +36,6 @@
             background-image: linear-gradient(135deg, #e8ecf1 0%, #dce1e7 100%);
         }
 
-        /* Title Bar */
         .titlebar {
             background: var(--titlebar);
             color: white;
@@ -62,7 +61,6 @@
         .titlebar-btn:hover { background: rgba(255,255,255,0.15); }
         .titlebar-btn.close:hover { background: var(--danger); }
 
-        /* Ribbon */
         .ribbon {
             background: var(--ribbon-bg);
             border-bottom: 1px solid var(--border);
@@ -89,7 +87,6 @@
         .ribbon-btn:hover { background: #e5e5e5; border-color: #ccc; }
         .ribbon-btn .icon { font-size: 18px; margin-bottom: 2px; }
 
-        /* Address Bar */
         .address-bar {
             display: flex; align-items: center; background: white;
             border-bottom: 1px solid var(--border); padding: 4px 8px;
@@ -123,10 +120,8 @@
             border-color: var(--accent); box-shadow: 0 0 0 1px rgba(0,120,212,0.2);
         }
 
-        /* Main Layout */
         .main { display: flex; flex: 1; overflow: hidden; }
 
-        /* Sidebar */
         .sidebar {
             width: 220px; background: var(--sidebar-bg);
             border-right: 1px solid var(--border); display: flex;
@@ -147,7 +142,6 @@
         .sidebar-item .icon { font-size: 18px; width: 22px; text-align: center; }
         .sidebar-separator { height: 1px; background: var(--border); margin: 4px 12px; }
 
-        /* Content */
         .content {
             flex: 1; background: white; overflow-y: auto; padding: 16px;
             display: flex; flex-direction: column;
@@ -217,14 +211,12 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Status Bar */
         .statusbar {
             background: var(--sidebar-bg); border-top: 1px solid var(--border);
             padding: 3px 12px; font-size: 12px; color: var(--muted);
             display: flex; justify-content: space-between; flex-shrink: 0;
         }
 
-        /* Taskbar */
         .taskbar {
             background: var(--taskbar); border-top: 1px solid #d0d0d0;
             height: 44px; display: flex; align-items: center;
@@ -249,13 +241,11 @@
         .taskbar-clock { padding: 4px 8px; border-radius: 4px; cursor: default; }
         .taskbar-clock:hover { background: #ddd; }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f5f5f5; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
 
-        /* Breadcrumb */
         .breadcrumb-nav {
             display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
         }
@@ -465,17 +455,18 @@
         <div class="file-viewer-window">
             <div class="file-viewer-titlebar">
                 <span id="viewerTitle">📄 file.txt</span>
-                <div style="display:flex;gap:4px;">
+                <div id="viewerButtons">
                     <button onclick="copyFileContent()" title="Копировать">📋</button>
-                    <button onclick="window.open(window._currentViewerRawUrl, '_blank')" title="Raw">🔗</button>
+                    <button id="btnRaw" title="Raw">🔗</button>
+                    <button id="btnDownload" title="Скачать">💾</button>
                     <button onclick="closeFileViewer()" title="Закрыть">✕</button>
                 </div>
             </div>
-            <div class="file-viewer-content">
+            <div class="file-viewer-content" id="viewerContent">
                 <pre><code id="viewerCode" class="language-plaintext">Загрузка...</code></pre>
             </div>
             <div class="file-viewer-status">
-                <span id="viewerStatus">Загрузка...</span>
+                <span id="viewerStatus">Готов</span>
             </div>
         </div>
     </div>
@@ -486,7 +477,7 @@
         const REPO_NAME = 'Defency-Helper-test';
         const REPO_BRANCH = 'main';
 
-        // ==================== НЕ ТРОГАЙ НИЖЕ (всё строится автоматом) ====================
+        // ==================== АВТОМАТИКА ====================
         const API_BASE = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`;
         const RAW_BASE = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${REPO_BRANCH}`;
         const REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
@@ -571,7 +562,6 @@
                         ${searchQuery ? '🔍 Ничего не найдено' : '📭 Папка пуста'}
                     </div>`;
             } else {
-                // Сортируем: папки сверху, потом по алфавиту
                 filteredFiles.sort((a, b) => {
                     if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
                     return a.name.localeCompare(b.name);
@@ -581,8 +571,7 @@
                     const icon = getFileIcon(file);
                     const meta = file.type === 'dir' ? 'Папка' : formatSize(file.size);
                     const isSelected = selectedFiles.has(file.path);
-                    // Экранируем путь для data-атрибута
-                    const escapedPath = file.path.replace(/'/g, "\\'");
+                    const escapedPath = file.path.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     return `
                         <div class="file-item ${isSelected ? 'selected' : ''}"
                              data-path="${escapedPath}"
@@ -714,47 +703,83 @@
             const rawUrl = `${RAW_BASE}/${path}`;
             window._currentViewerRawUrl = rawUrl;
 
-            const textExtensions = [
-                'txt', 'md', 'html', 'htm', 'css', 'js', 'jsx', 'ts', 'tsx',
-                'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'cfg',
-                'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp',
-                'sh', 'bat', 'ps1', 'sql', 'r', 'go', 'rs', 'swift',
-                'kt', 'scala', 'lua', 'pl', 'pm', 'vue', 'svelte',
-                'gitignore', 'env', 'editorconfig', 'prettierrc', 'eslintrc',
-                'lock', 'log', 'csv', 'svg'
-            ];
-
             const ext = path.split('.').pop().toLowerCase();
             const name = path.split('/').pop();
 
-            const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico'];
+            // Изображения — показываем в просмотрщике
+            const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'svg'];
             if (imageExtensions.includes(ext)) {
-                window.open(rawUrl, '_blank');
+                openImageViewer(name, rawUrl);
                 return;
             }
 
-            if (textExtensions.includes(ext) || textExtensions.includes(name)) {
-                openFileViewer(name, rawUrl);
+            // Бинарные файлы — скачиваем
+            const binaryExtensions = ['zip', 'tar', 'gz', 'rar', '7z', 'exe', 'dll', 'so', 'dylib',
+                'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+                'mp3', 'wav', 'ogg', 'mp4', 'avi', 'mov', 'webm',
+                'ttf', 'otf', 'woff', 'woff2', 'eot'
+            ];
+            if (binaryExtensions.includes(ext)) {
+                downloadFile(rawUrl, name);
                 return;
             }
 
-            window.open(rawUrl, '_blank');
+            // Всё остальное (текст) — открываем в редакторе
+            openFileViewer(name, rawUrl);
         }
 
-        async function openFileViewer(filename, url) {
+        // ==================== ПРОСМОТРЩИК ИЗОБРАЖЕНИЙ ====================
+        function openImageViewer(filename, url) {
             const viewer = document.getElementById('fileViewer');
-            const codeEl = document.getElementById('viewerCode');
             const titleEl = document.getElementById('viewerTitle');
             const statusEl = document.getElementById('viewerStatus');
+            const contentDiv = document.getElementById('viewerContent');
+            const buttonsDiv = document.getElementById('viewerButtons');
+
+            viewer.style.display = 'flex';
+            titleEl.textContent = `🖼️ ${filename}`;
+            statusEl.textContent = url;
+
+            contentDiv.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:center;height:100%;">
+                    <img src="${url}" alt="${filename}" 
+                         style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;"
+                         onerror="this.parentElement.innerHTML='<p style=color:#ccc;text-align:center;>❌ Не удалось загрузить изображение</p>'">
+                </div>
+            `;
+
+            buttonsDiv.innerHTML = `
+                <button onclick="window.open('${url}', '_blank')" title="Открыть в новой вкладке">🔗</button>
+                <button onclick="downloadFile('${url}', '${filename}')" title="Скачать">💾</button>
+                <button onclick="closeFileViewer()" title="Закрыть">✕</button>
+            `;
+        }
+
+        // ==================== ПРОСМОТРЩИК ТЕКСТОВЫХ ФАЙЛОВ ====================
+        async function openFileViewer(filename, url) {
+            const viewer = document.getElementById('fileViewer');
+            const titleEl = document.getElementById('viewerTitle');
+            const statusEl = document.getElementById('viewerStatus');
+            const contentDiv = document.getElementById('viewerContent');
+            const buttonsDiv = document.getElementById('viewerButtons');
 
             viewer.style.display = 'flex';
             titleEl.textContent = `📄 ${filename}`;
-            codeEl.textContent = 'Загрузка...';
+            contentDiv.innerHTML = '<pre><code id="viewerCode">Загрузка...</code></pre>';
             statusEl.textContent = 'Загрузка...';
+
+            buttonsDiv.innerHTML = `
+                <button onclick="copyFileContent()" title="Копировать">📋</button>
+                <button onclick="window.open('${url}', '_blank')" title="Raw (может скачаться)">🔗</button>
+                <button onclick="downloadFile('${url}', '${filename}')" title="Скачать">💾</button>
+                <button onclick="closeFileViewer()" title="Закрыть">✕</button>
+            `;
+
+            const codeEl = document.getElementById('viewerCode');
 
             try {
                 const response = await fetch(url);
-                if (!response.ok) throw new Error('Ошибка загрузки');
+                if (!response.ok) throw new Error(`Ошибка ${response.status}`);
                 const text = await response.text();
                 codeEl.textContent = text;
 
@@ -770,20 +795,33 @@
 
                 const size = new Blob([text]).size;
                 const lines = text.split('\n').length;
-                statusEl.textContent = `${lines} строк(и) · ${formatSize(size)} · ${url}`;
+                statusEl.textContent = `${lines} строк(и) · ${formatSize(size)}`;
 
             } catch (error) {
-                codeEl.textContent = `Ошибка загрузки: ${error.message}`;
-                statusEl.textContent = 'Ошибка';
+                codeEl.textContent = `Ошибка загрузки: ${error.message}\n\nURL: ${url}`;
+                statusEl.textContent = '❌ Ошибка';
             }
         }
 
+        // ==================== СКАЧИВАНИЕ ====================
+        function downloadFile(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // ==================== ЗАКРЫТИЕ ПРОСМОТРЩИКА ====================
         function closeFileViewer() {
             document.getElementById('fileViewer').style.display = 'none';
         }
 
         function copyFileContent() {
-            const text = document.getElementById('viewerCode').textContent;
+            const codeEl = document.getElementById('viewerCode');
+            if (!codeEl) return;
+            const text = codeEl.textContent;
             navigator.clipboard.writeText(text).then(() => {
                 const statusEl = document.getElementById('viewerStatus');
                 const prevText = statusEl.textContent;
@@ -791,6 +829,14 @@
                 setTimeout(() => {
                     statusEl.textContent = prevText;
                 }, 1500);
+            }).catch(() => {
+                // Fallback для старых браузеров
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
             });
         }
 
@@ -831,23 +877,50 @@
 
         // ==================== КЛАВИАТУРА ====================
         document.addEventListener('keydown', (e) => {
+            // Закрыть просмотрщик по Escape
             if (e.key === 'Escape') {
-                closeFileViewer();
+                const viewer = document.getElementById('fileViewer');
+                if (viewer.style.display === 'flex') {
+                    closeFileViewer();
+                    return;
+                }
             }
+
+            // Копировать по Ctrl+C когда просмотрщик открыт
+            if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+                const viewer = document.getElementById('fileViewer');
+                if (viewer.style.display === 'flex') {
+                    copyFileContent();
+                    e.preventDefault();
+                    return;
+                }
+            }
+
+            // Backspace — на уровень вверх
             if (e.key === 'Backspace' && document.activeElement === document.body) {
-                navigateUp();
+                const viewer = document.getElementById('fileViewer');
+                if (viewer.style.display !== 'flex') {
+                    navigateUp();
+                }
             }
+
+            // F5 — обновить
             if (e.key === 'F5') {
                 e.preventDefault();
                 refreshFiles();
             }
+
+            // Ctrl+A — выбрать всё
             if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-                e.preventDefault();
-                document.querySelectorAll('.file-item').forEach(el => {
-                    el.classList.add('selected');
-                    selectedFiles.add(el.dataset.path);
-                });
-                updateSelectionCount();
+                const viewer = document.getElementById('fileViewer');
+                if (viewer.style.display !== 'flex') {
+                    e.preventDefault();
+                    document.querySelectorAll('.file-item').forEach(el => {
+                        el.classList.add('selected');
+                        selectedFiles.add(el.dataset.path);
+                    });
+                    updateSelectionCount();
+                }
             }
         });
 
