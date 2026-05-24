@@ -4,12 +4,18 @@
 
 local M = {}
 
-local config_dir = Defency.data_dir or (getWorkingDirectory():gsub('\\', '/') .. "/DefencyHelper")
-local settings_path = config_dir .. "/Settings.json"
+local config_dir = nil
+local settings_path = nil
+
+local function EnsurePaths()
+    if config_dir then return end
+    config_dir = Defency.data_dir or (getWorkingDirectory():gsub('\\', '/') .. "/DefencyHelper")
+    settings_path = config_dir .. "/Settings.json"
+end
 
 M.default_settings = {
     general = {
-        version = thisScript().version,
+        version = "1.2.0",
         helper_theme = 0,
         custom_dpi = 1.0,
         autofind_dpi = true,
@@ -48,12 +54,14 @@ M.default_settings = {
 M.settings = {}
 
 function M.Load()
+    EnsurePaths()
+
     if not doesDirectoryExist(config_dir) then
         createDirectory(config_dir)
     end
 
     if not doesFileExist(settings_path) then
-        print(u8("Defency Helper | Первый запуск. Создаём настройки..."))
+        print("Defency Helper | Первый запуск. Создаём настройки...")
         M.settings = M.default_settings
         M.Save()
 
@@ -76,9 +84,9 @@ function M.Load()
         local ok, loaded = pcall(decodeJson, content)
         if ok and loaded then
             M.settings = loaded
-            print(u8("Defency Helper | Настройки загружены"))
+            print("Defency Helper | Настройки загружены")
         else
-            print(u8("Defency Helper | Ошибка чтения настроек. Используем стандартные."))
+            print("Defency Helper | Ошибка чтения настроек. Используем стандартные.")
             M.settings = M.default_settings
         end
     else
@@ -90,6 +98,8 @@ function M.Load()
 end
 
 function M.Save()
+    EnsurePaths()
+
     if not M.settings then return end
 
     local f = io.open(settings_path, "w")
@@ -98,13 +108,12 @@ function M.Save()
         if content then
             f:write(content)
             f:close()
-            -- print(u8("Настройки сохранены")) -- можно раскомментировать для отладки
         else
             f:close()
-            print(u8("Ошибка кодирования JSON при сохранении настроек"))
+            print("Defency Helper | Ошибка кодирования JSON при сохранении настроек")
         end
     else
-        print(u8("Не удалось сохранить Settings.json"))
+        print("Defency Helper | Не удалось сохранить Settings.json")
     end
 end
 
