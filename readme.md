@@ -472,12 +472,11 @@
     </div>
 
     <script>
-        // ==================== НАСТРОЙКИ — УКАЖИ СВОИ ДАННЫЕ ====================
+        // ==================== НАСТРОЙКИ ====================
         const REPO_OWNER = 'AlexWright55';
         const REPO_NAME = 'Defency-Helper-test';
         const REPO_BRANCH = 'main';
 
-        // ==================== АВТОМАТИКА ====================
         const API_BASE = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`;
         const RAW_BASE = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${REPO_BRANCH}`;
         const REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
@@ -498,10 +497,7 @@
                 const response = await fetch(url, {
                     headers: { 'Accept': 'application/vnd.github.v3+json' }
                 });
-                if (!response.ok) {
-                    console.error('❌ Ошибка ответа:', response.status, response.statusText);
-                    throw new Error(`Ошибка ${response.status}: ${response.statusText}`);
-                }
+                if (!response.ok) throw new Error(`Ошибка ${response.status}: ${response.statusText}`);
                 const data = await response.json();
                 console.log('✅ Загружено элементов:', Array.isArray(data) ? data.length : 1);
                 return Array.isArray(data) ? data : [data];
@@ -528,7 +524,7 @@
                 'pdf': '📕', 'doc': '📘', 'docx': '📘',
                 'zip': '📦', 'tar': '📦', 'gz': '📦', 'rar': '📦',
                 'gitignore': '🔒', 'lock': '🔒',
-                'sh': '💻', 'bat': '💻', 'py': '🐍', 'rb': '💎', 'php': '🐘',
+                'sh': '💻', 'bat': '💻', 'py': '🐍', 'rb': '💎', 'php': '🐘', 'lua': '🌙',
                 'toml': '⚙️', 'cfg': '⚙️', 'ini': '⚙️',
             };
 
@@ -662,7 +658,7 @@
             document.getElementById('currentFolderLabel').textContent = label;
         }
 
-        async function loadCurrentDirectory(addToHistory = true) {
+        async function loadCurrentDirectory() {
             const grid = document.getElementById('filesGrid');
             grid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Загрузка...</div>';
             allFiles = await fetchFiles(currentPath);
@@ -671,7 +667,7 @@
         }
 
         function refreshFiles() {
-            loadCurrentDirectory(false);
+            loadCurrentDirectory();
         }
 
         // ==================== ВЫДЕЛЕНИЕ И КЛИКИ ====================
@@ -694,6 +690,7 @@
             updateSelectionCount();
         }
 
+        // ==================== ГЛАВНАЯ ФУНКЦИЯ ОТКРЫТИЯ ФАЙЛА ====================
         async function handleFileDoubleClick(path, type) {
             if (type === 'dir') {
                 navigateTo(path);
@@ -702,30 +699,127 @@
 
             const rawUrl = `${RAW_BASE}/${path}`;
             window._currentViewerRawUrl = rawUrl;
-
-            const ext = path.split('.').pop().toLowerCase();
             const name = path.split('/').pop();
+            const ext = name.split('.').pop().toLowerCase();
 
-            // Изображения — показываем в просмотрщике
-            const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'svg'];
-            if (imageExtensions.includes(ext)) {
+            // Изображения — показываем сразу (по расширению)
+            const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'svg'];
+            if (imageExts.includes(ext)) {
                 openImageViewer(name, rawUrl);
                 return;
             }
 
-            // Бинарные файлы — скачиваем
-            const binaryExtensions = ['zip', 'tar', 'gz', 'rar', '7z', 'exe', 'dll', 'so', 'dylib',
+            // Заведомо бинарные — скачиваем сразу
+            const binaryExts = [
+                'zip', 'tar', 'gz', 'rar', '7z', 'bz2', 'xz',
+                'exe', 'dll', 'so', 'dylib', 'bin', 'dat',
                 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-                'mp3', 'wav', 'ogg', 'mp4', 'avi', 'mov', 'webm',
-                'ttf', 'otf', 'woff', 'woff2', 'eot'
+                'mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a',
+                'mp4', 'avi', 'mov', 'webm', 'mkv', 'flv',
+                'ttf', 'otf', 'woff', 'woff2', 'eot',
+                'iso', 'img', 'dmg', 'apk', 'ipa'
             ];
-            if (binaryExtensions.includes(ext)) {
+            if (binaryExts.includes(ext)) {
                 downloadFile(rawUrl, name);
+                showToast(`💾 Скачивание: ${name}`);
                 return;
             }
 
-            // Всё остальное (текст) — открываем в редакторе
-            openFileViewer(name, rawUrl);
+            // ВСЁ ОСТАЛЬНОЕ (включая .lua !!!) — пробуем как текст
+            openTextOrBinary(rawUrl, name);
+        }
+
+        // ==================== УМНЫЙ ОПРЕДЕЛИТЕЛЬ: ТЕКСТ ИЛИ БИНАРНИК ====================
+        async function openTextOrBinary(url, filename) {
+            // Показываем окно просмотрщика с лоадером
+            const viewer = document.getElementById('fileViewer');
+            const titleEl = document.getElementById('viewerTitle');
+            const statusEl = document.getElementById('viewerStatus');
+            const contentDiv = document.getElementById('viewerContent');
+            const buttonsDiv = document.getElementById('viewerButtons');
+
+            viewer.style.display = 'flex';
+            titleEl.textContent = `📄 ${filename}`;
+            contentDiv.innerHTML = '<pre><code id="viewerCode">⏳ Проверяю файл...</code></pre>';
+            statusEl.textContent = 'Анализ...';
+
+            buttonsDiv.innerHTML = `
+                <button disabled title="Копировать">📋</button>
+                <button disabled title="Raw">🔗</button>
+                <button onclick="downloadFile('${url}', '${filename}')" title="Скачать">💾</button>
+                <button onclick="closeFileViewer()" title="Закрыть">✕</button>
+            `;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Ошибка ${response.status}`);
+
+                const arrayBuffer = await response.arrayBuffer();
+                const bytes = new Uint8Array(arrayBuffer);
+
+                // Проверяем: если в первых 512 байтах есть нулевые байты — это бинарник
+                const sampleSize = Math.min(bytes.length, 512);
+                let isBinary = false;
+                for (let i = 0; i < sampleSize; i++) {
+                    if (bytes[i] === 0) {
+                        isBinary = true;
+                        break;
+                    }
+                    // Также проверяем на не-UTF8 последовательности
+                    if (bytes[i] > 127 && bytes[i] < 192) {
+                        // Может быть частью multi-byte, пропускаем
+                    }
+                }
+
+                if (isBinary) {
+                    // Это бинарный файл — закрываем просмотрщик и скачиваем
+                    closeFileViewer();
+                    downloadFile(url, filename);
+                    showToast(`💾 Скачивание бинарного файла: ${filename}`);
+                    return;
+                }
+
+                // Это текст! Декодируем и показываем
+                const decoder = new TextDecoder('utf-8');
+                const text = decoder.decode(arrayBuffer);
+
+                contentDiv.innerHTML = '<pre><code id="viewerCode"></code></pre>';
+                const codeEl = document.getElementById('viewerCode');
+                codeEl.textContent = text;
+
+                const ext = filename.split('.').pop().toLowerCase();
+                const langMap = {
+                    'js': 'javascript', 'jsx': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
+                    'py': 'python', 'rb': 'ruby', 'java': 'java', 'c': 'c', 'cpp': 'cpp',
+                    'css': 'css', 'html': 'html', 'json': 'json', 'xml': 'xml',
+                    'sh': 'bash', 'bat': 'batch', 'sql': 'sql', 'go': 'go', 'rs': 'rust',
+                    'md': 'markdown', 'yaml': 'yaml', 'yml': 'yaml', 'toml': 'toml',
+                    'lua': 'lua', 'php': 'php', 'swift': 'swift', 'kt': 'kotlin',
+                };
+                codeEl.className = `language-${langMap[ext] || 'plaintext'}`;
+
+                const size = new Blob([text]).size;
+                const lines = text.split('\n').length;
+                statusEl.textContent = `${lines} строк(и) · ${formatSize(size)}`;
+
+                // Активируем кнопки
+                buttonsDiv.innerHTML = `
+                    <button onclick="copyFileContent()" title="Копировать">📋</button>
+                    <button onclick="window.open('${url}', '_blank')" title="Raw">🔗</button>
+                    <button onclick="downloadFile('${url}', '${filename}')" title="Скачать">💾</button>
+                    <button onclick="closeFileViewer()" title="Закрыть">✕</button>
+                `;
+
+                showToast(`📄 Открыто: ${filename}`);
+
+            } catch (error) {
+                const codeEl = document.getElementById('viewerCode');
+                if (codeEl) {
+                    codeEl.textContent = `Ошибка загрузки: ${error.message}\n\nURL: ${url}`;
+                }
+                statusEl.textContent = '❌ Ошибка';
+                showToast(`❌ Ошибка: ${filename}`);
+            }
         }
 
         // ==================== ПРОСМОТРЩИК ИЗОБРАЖЕНИЙ ====================
@@ -753,57 +847,11 @@
                 <button onclick="downloadFile('${url}', '${filename}')" title="Скачать">💾</button>
                 <button onclick="closeFileViewer()" title="Закрыть">✕</button>
             `;
+
+            showToast(`🖼️ Просмотр: ${filename}`);
         }
 
-        // ==================== ПРОСМОТРЩИК ТЕКСТОВЫХ ФАЙЛОВ ====================
-        async function openFileViewer(filename, url) {
-            const viewer = document.getElementById('fileViewer');
-            const titleEl = document.getElementById('viewerTitle');
-            const statusEl = document.getElementById('viewerStatus');
-            const contentDiv = document.getElementById('viewerContent');
-            const buttonsDiv = document.getElementById('viewerButtons');
-
-            viewer.style.display = 'flex';
-            titleEl.textContent = `📄 ${filename}`;
-            contentDiv.innerHTML = '<pre><code id="viewerCode">Загрузка...</code></pre>';
-            statusEl.textContent = 'Загрузка...';
-
-            buttonsDiv.innerHTML = `
-                <button onclick="copyFileContent()" title="Копировать">📋</button>
-                <button onclick="window.open('${url}', '_blank')" title="Raw (может скачаться)">🔗</button>
-                <button onclick="downloadFile('${url}', '${filename}')" title="Скачать">💾</button>
-                <button onclick="closeFileViewer()" title="Закрыть">✕</button>
-            `;
-
-            const codeEl = document.getElementById('viewerCode');
-
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Ошибка ${response.status}`);
-                const text = await response.text();
-                codeEl.textContent = text;
-
-                const ext = filename.split('.').pop().toLowerCase();
-                const langMap = {
-                    'js': 'javascript', 'jsx': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
-                    'py': 'python', 'rb': 'ruby', 'java': 'java', 'c': 'c', 'cpp': 'cpp',
-                    'css': 'css', 'html': 'html', 'json': 'json', 'xml': 'xml',
-                    'sh': 'bash', 'bat': 'batch', 'sql': 'sql', 'go': 'go', 'rs': 'rust',
-                    'md': 'markdown', 'yaml': 'yaml', 'yml': 'yaml', 'toml': 'toml',
-                };
-                codeEl.className = `language-${langMap[ext] || 'plaintext'}`;
-
-                const size = new Blob([text]).size;
-                const lines = text.split('\n').length;
-                statusEl.textContent = `${lines} строк(и) · ${formatSize(size)}`;
-
-            } catch (error) {
-                codeEl.textContent = `Ошибка загрузки: ${error.message}\n\nURL: ${url}`;
-                statusEl.textContent = '❌ Ошибка';
-            }
-        }
-
-        // ==================== СКАЧИВАНИЕ ====================
+        // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
         function downloadFile(url, filename) {
             const a = document.createElement('a');
             a.href = url;
@@ -813,7 +861,6 @@
             document.body.removeChild(a);
         }
 
-        // ==================== ЗАКРЫТИЕ ПРОСМОТРЩИКА ====================
         function closeFileViewer() {
             document.getElementById('fileViewer').style.display = 'none';
         }
@@ -823,20 +870,15 @@
             if (!codeEl) return;
             const text = codeEl.textContent;
             navigator.clipboard.writeText(text).then(() => {
-                const statusEl = document.getElementById('viewerStatus');
-                const prevText = statusEl.textContent;
-                statusEl.textContent = '✅ Скопировано!';
-                setTimeout(() => {
-                    statusEl.textContent = prevText;
-                }, 1500);
+                showToast('✅ Скопировано!');
             }).catch(() => {
-                // Fallback для старых браузеров
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
                 document.body.appendChild(textarea);
                 textarea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textarea);
+                showToast('✅ Скопировано!');
             });
         }
 
@@ -844,6 +886,44 @@
             const count = selectedFiles.size;
             document.getElementById('statusSelected').textContent =
                 count > 0 ? `Выбрано: ${count} элем.` : 'Выбрано: 0 элементов';
+        }
+
+        // ==================== TOAST-УВЕДОМЛЕНИЯ ====================
+        function showToast(message) {
+            // Удаляем старый тост
+            const oldToast = document.querySelector('.custom-toast');
+            if (oldToast) oldToast.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'custom-toast';
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 60px;
+                right: 20px;
+                background: #333;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 8px;
+                font-size: 13px;
+                z-index: 99999;
+                animation: toastIn 0.3s ease, toastOut 0.3s ease 1.5s forwards;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                font-family: 'Segoe UI', system-ui, sans-serif;
+            `;
+
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+            `;
+            document.head.appendChild(style);
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+                style.remove();
+            }, 2000);
         }
 
         // ==================== ПОИСК ====================
@@ -877,7 +957,6 @@
 
         // ==================== КЛАВИАТУРА ====================
         document.addEventListener('keydown', (e) => {
-            // Закрыть просмотрщик по Escape
             if (e.key === 'Escape') {
                 const viewer = document.getElementById('fileViewer');
                 if (viewer.style.display === 'flex') {
@@ -886,7 +965,6 @@
                 }
             }
 
-            // Копировать по Ctrl+C когда просмотрщик открыт
             if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
                 const viewer = document.getElementById('fileViewer');
                 if (viewer.style.display === 'flex') {
@@ -896,7 +974,6 @@
                 }
             }
 
-            // Backspace — на уровень вверх
             if (e.key === 'Backspace' && document.activeElement === document.body) {
                 const viewer = document.getElementById('fileViewer');
                 if (viewer.style.display !== 'flex') {
@@ -904,13 +981,11 @@
                 }
             }
 
-            // F5 — обновить
             if (e.key === 'F5') {
                 e.preventDefault();
                 refreshFiles();
             }
 
-            // Ctrl+A — выбрать всё
             if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
                 const viewer = document.getElementById('fileViewer');
                 if (viewer.style.display !== 'flex') {
