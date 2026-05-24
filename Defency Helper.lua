@@ -1,10 +1,10 @@
 ---@diagnostic disable: undefined-global, lowercase-global
 script_name("Defency Helper")
-script_description('Г•ГҐГ«ГЇГҐГ° Г¤Г«Гї Г±Г®ГІГ°ГіГ¤Г­ГЁГЄГ®Гў Г’Г‘Гђ Arizona & Rodina')
+script_description('Хелпер для сотрудников ТСР Arizona & Rodina')
 script_author("Flip Anderson")
 script_version("v1.2.0")
 
--- ====================== ГЃГ€ГЃГ‹Г€ГЋГ’Г…ГЉГ€ ======================
+-- ====================== БИБЛИОТЕКИ ======================
 require('encoding').default = 'CP1251'
 local u8 = require('encoding').UTF8
 _G.imgui = require('mimgui')
@@ -13,13 +13,13 @@ local root_dir = getWorkingDirectory():gsub('\\', '/')
 local lib_dir = root_dir .. "/lib/DefencyHelper"
 local data_dir = root_dir .. "/DefencyHelper"
 
-print(("Defency Helper | Г‡Г ГЇГіГ±ГЄ v") .. thisScript().version)
+print(("Defency Helper | Запуск v") .. thisScript().version)
 
 -- ====================== GITHUB ======================
 local GITHUB_BASE = "https://alexwright55.github.io/Defency-Helper-test/lib/"
 
--- ====================== Г”Г“ГЌГЉГ–Г€Г€ Г‡ГЂГѓГђГ“Г‡ГЉГ€ ======================
--- Г”ГіГ­ГЄГ¶ГЁГї Г¤Г«Гї ГЇГ®Г«ГіГ·ГҐГ­ГЁГї ГЁГ­ГґГ®Г°Г¬Г Г¶ГЁГЁ Г® ГґГ Г©Г«ГҐ
+-- ====================== ФУНКЦИИ ЗАГРУЗКИ ======================
+-- Функция для получения информации о файле
 local function file_info(path)
     local f = io.open(path, "rb")
     if not f then return nil end
@@ -28,7 +28,7 @@ local function file_info(path)
     return {size = size}
 end
 
--- Г”ГіГ­ГЄГ¶ГЁГї ГЇГ°Г®ГўГҐГ°ГЄГЁ Г±ГіГ№ГҐГ±ГІГўГ®ГўГ Г­ГЁГї ГґГ Г©Г«Г 
+-- Функция проверки существования файла
 local function file_exists(path)
     local f = io.open(path, "r")
     if f then
@@ -38,21 +38,21 @@ local function file_exists(path)
     return false
 end
 
--- Г”ГіГ­ГЄГ¶ГЁГї ГЇГ°Г®ГўГҐГ°ГЄГЁ Г±ГіГ№ГҐГ±ГІГўГ®ГўГ Г­ГЁГї Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ
+-- Функция проверки существования директории
 local function directory_exists(dir)
     return doesDirectoryExist(dir)
 end
 
--- Г”ГіГ­ГЄГ¶ГЁГї Г±Г®Г§Г¤Г Г­ГЁГї Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГЁ
+-- Функция создания директории
 local function ensure_directory(dir)
     if not directory_exists(dir) then
         createDirectory(dir)
     end
 end
 
--- Г”ГіГ­ГЄГ¶ГЁГї Г§Г ГЈГ°ГіГ§ГЄГЁ ГґГ Г©Г«Г  (Г±ГЁГ­ГµГ°Г®Г­Г­Г Гї, ГЎГҐГ§ wait)
+-- Функция загрузки файла (синхронная, без wait)
 local function download_file(url, path)
-    -- Г‘Г®Г§Г¤Г ВёГ¬ Г¤ГЁГ°ГҐГЄГІГ®Г°ГЁГѕ ГҐГ±Г«ГЁ Г­ГіГ¦Г­Г®
+    -- Создаём директорию если нужно
     local dir = path:match("(.*)[/\\]")
     if dir then
         ensure_directory(dir)
@@ -60,30 +60,30 @@ local function download_file(url, path)
     
     local file = io.open(path, "wb")
     if not file then 
-        print("ГЌГҐ ГіГ¤Г Г«Г®Г±Гј Г±Г®Г§Г¤Г ГІГј ГґГ Г©Г«: " .. path)
+        print("Не удалось создать файл: " .. path)
         return false 
     end
     
-    -- Г€Г±ГЇГ®Г«ГјГ§ГіГҐГ¬ downloadUrlToFile
+    -- Используем downloadUrlToFile
     local download_complete = false
     local download_success = false
     
     downloadUrlToFile(url, path, function(id, status, downloaded, totalSize)
-        if status == 6 then -- Г‡Г ГўГҐГ°ГёГҐГ­Г®
+        if status == 6 then -- Завершено
             download_complete = true
             download_success = true
-        elseif status == 4 then -- ГЋГёГЁГЎГЄГ 
+        elseif status == 4 then -- Ошибка
             download_complete = true
             download_success = false
         end
     end)
     
-    -- Г†Г¤ВёГ¬ Г§Г ГўГҐГ°ГёГҐГ­ГЁГї Г§Г ГЈГ°ГіГ§ГЄГЁ (ГЇГ°Г®Г±ГІГ®Г© Г¶ГЁГЄГ« ГЎГҐГ§ wait)
+    -- Ждём завершения загрузки (простой цикл без wait)
     local timeout = 0
     while not download_complete and timeout < 300 do
-        -- ГЌГҐ ГЁГ±ГЇГ®Г«ГјГ§ГіГҐГ¬ wait, ГЇГ°Г®Г±ГІГ® Г¤Г ВёГ¬ ГўГ°ГҐГ¬Гї Г­Г  Г§Г ГЈГ°ГіГ§ГЄГі
+        -- Не используем wait, просто даём время на загрузку
         local start = os.clock()
-        while os.clock() - start < 0.05 do end -- Г­ГҐГЎГ®Г«ГјГёГ®ГҐ Г®Г¦ГЁГ¤Г Г­ГЁГҐ
+        while os.clock() - start < 0.05 do end -- небольшое ожидание
         timeout = timeout + 1
     end
     
@@ -94,7 +94,7 @@ local function download_file(url, path)
         return false
     end
     
-    -- ГЏГ°Г®ГўГҐГ°ГїГҐГ¬, Г·ГІГ® ГґГ Г©Г« Г±Г®Г§Г¤Г Г­ ГЁ Г­ГҐ ГЇГіГ±ГІГ®Г©
+    -- Проверяем, что файл создан и не пустой
     local info = file_info(path)
     if not info or info.size == 0 then
         os.remove(path)
@@ -104,38 +104,38 @@ local function download_file(url, path)
     return true
 end
 
--- Г”ГіГ­ГЄГ¶ГЁГї Г§Г ГЈГ°ГіГ§ГЄГЁ ГґГ Г©Г«Г  Г± GitHub
+-- Функция загрузки файла с GitHub
 local function load_file_from_github(file_path, local_path)
-    -- Г…Г±Г«ГЁ ГґГ Г©Г« ГіГ¦ГҐ Г±ГіГ№ГҐГ±ГІГўГіГҐГІ, ГЇГ°Г®ГЇГіГ±ГЄГ ГҐГ¬
+    -- Если файл уже существует, пропускаем
     if file_exists(local_path) then
         return true
     end
     
     local github_url = GITHUB_BASE .. file_path:gsub("\\", "/")
-    print(("Г‡Г ГЈГ°ГіГ§ГЄГ : ") .. github_url)
+    print(("Загрузка: ") .. github_url)
     
     if download_file(github_url, local_path) then
-        print(("Г“Г±ГЇГҐГёГ­Г®: ") .. file_path)
+        print(("Успешно: ") .. file_path)
         return true
     else
-        print(("ГЋГёГЁГЎГЄГ  Г§Г ГЈГ°ГіГ§ГЄГЁ: ") .. file_path)
+        print(("Ошибка загрузки: ") .. file_path)
         return false
     end
 end
 
--- Г”ГіГ­ГЄГ¶ГЁГї ГЇГ°Г®ГўГҐГ°ГЄГЁ ГЁ Г§Г ГЈГ°ГіГ§ГЄГЁ Г®ГІГ±ГіГІГ±ГІГўГіГѕГ№ГЁГµ ГґГ Г©Г«Г®Гў (Г±ГЁГ­ГµГ°Г®Г­Г­Г Гї)
+-- Функция проверки и загрузки отсутствующих файлов (синхронная)
 local function check_and_download_missing_files()
-    print("ГЏГ°Г®ГўГҐГ°ГЄГ  Г­Г Г«ГЁГ·ГЁГї ГґГ Г©Г«Г®Гў...")
+    print("Проверка наличия файлов...")
     
-    -- Г‘ГЇГЁГ±Г®ГЄ ГґГ Г©Г«Г®Гў Г¤Г«Гї ГЇГ°Г®ГўГҐГ°ГЄГЁ
+    -- Список файлов для проверки
     local files_to_check = {
-        -- ГЋГ±Г­Г®ГўГ­Г»ГҐ ГґГ Г©Г«Г»
+        -- Основные файлы
         {github = "config.lua", local_path = lib_dir .. "/config.lua"},
         {github = "utils.lua", local_path = lib_dir .. "/utils.lua"},
         {github = "themes.lua", local_path = lib_dir .. "/themes.lua"},
         {github = "debug.lua", local_path = lib_dir .. "/debug.lua"},
         
-        -- ГЊГ®Г¤ГіГ«ГЁ
+        -- Модули
         {github = "modules/commands.lua", local_path = lib_dir .. "/modules/commands.lua"},
         {github = "modules/rp_guns.lua", local_path = lib_dir .. "/modules/rp_guns.lua"},
         {github = "modules/departament.lua", local_path = lib_dir .. "/modules/departament.lua"},
@@ -143,7 +143,7 @@ local function check_and_download_missing_files()
         {github = "modules/smart_rptp.lua", local_path = lib_dir .. "/modules/smart_rptp.lua"},
         {github = "modules/unit_management.lua", local_path = lib_dir .. "/modules/unit_management.lua"},
         
-        -- UI ГґГ Г©Г«Г»
+        -- UI файлы
         {github = "ui/helpers.lua", local_path = lib_dir .. "/ui/helpers.lua"},
         {github = "ui/main_menu.lua", local_path = lib_dir .. "/ui/main_menu.lua"},
         {github = "ui/binder.lua", local_path = lib_dir .. "/ui/binder.lua"},
@@ -157,13 +157,13 @@ local function check_and_download_missing_files()
         {github = "ui/first_setup.lua", local_path = lib_dir .. "/ui/first_setup.lua"},
     }
     
-    -- Г‘Г®Г§Г¤Г ВёГ¬ Г­ГҐГ®ГЎГµГ®Г¤ГЁГ¬Г»ГҐ ГЇГ ГЇГЄГЁ
+    -- Создаём необходимые папки
     ensure_directory(lib_dir)
     ensure_directory(lib_dir .. "/modules")
     ensure_directory(lib_dir .. "/ui")
     ensure_directory(data_dir)
     
-    -- Г‘Г­Г Г·Г Г«Г  ГЇГ°Г®Г±ГІГ® ГЇГ°Г®ГўГҐГ°ГїГҐГ¬, ГЄГ ГЄГЁГҐ ГґГ Г©Г«Г» Г®ГІГ±ГіГІГ±ГІГўГіГѕГІ
+    -- Сначала просто проверяем, какие файлы отсутствуют
     local missing_files = {}
     for _, file in ipairs(files_to_check) do
         if not file_exists(file.local_path) then
@@ -172,40 +172,40 @@ local function check_and_download_missing_files()
     end
     
     if #missing_files == 0 then
-        print("Г‚Г±ГҐ ГґГ Г©Г«Г» ГЇГ°ГЁГ±ГіГІГ±ГІГўГіГѕГІ. Г‡Г ГЈГ°ГіГ§ГЄГ  Г­ГҐ ГІГ°ГҐГЎГіГҐГІГ±Гї.")
+        print("Все файлы присутствуют. Загрузка не требуется.")
         return true
     end
     
-    print(string.format("ГЋГІГ±ГіГІГ±ГІГўГіГҐГІ %d ГґГ Г©Г«Г®Гў. ГЌГ Г·ГЁГ­Г Гѕ Г§Г ГЈГ°ГіГ§ГЄГі...", #missing_files))
+    print(string.format("Отсутствует %d файлов. Начинаю загрузку...", #missing_files))
     
-    -- Г‡Г ГЈГ°ГіГ¦Г ГҐГ¬ Г®ГІГ±ГіГІГ±ГІГўГіГѕГ№ГЁГҐ ГґГ Г©Г«Г»
+    -- Загружаем отсутствующие файлы
     local downloaded_count = 0
     for _, file in ipairs(missing_files) do
         if load_file_from_github(file.github, file.local_path) then
             downloaded_count = downloaded_count + 1
         end
-        -- ГЌГҐГЎГ®Г«ГјГёГ Гї ГЇГ ГіГ§Г  Г¬ГҐГ¦Г¤Гі Г§Г ГЈГ°ГіГ§ГЄГ Г¬ГЁ
+        -- Небольшая пауза между загрузками
         local start = os.clock()
         while os.clock() - start < 0.1 do end
     end
     
-    print(string.format("Г‡Г ГЈГ°ГіГ¦ГҐГ­Г® %d/%d ГґГ Г©Г«Г®Гў", downloaded_count, #missing_files))
+    print(string.format("Загружено %d/%d файлов", downloaded_count, #missing_files))
     return downloaded_count == #missing_files
 end
 
--- ====================== Г‹ГЋГЉГЂГ‹ГњГЌГЂГџ Г‡ГЂГѓГђГ“Г‡ГЉГЂ ГЊГЋГ„Г“Г‹Г…Г‰ ======================
+-- ====================== ЛОКАЛЬНАЯ ЗАГРУЗКА МОДУЛЕЙ ======================
 local function safe_load(path)
     local ok, mod = pcall(require, path)
     if ok then 
         return mod 
     else
-        print(("ГЋГёГЁГЎГЄГ  Г§Г ГЈГ°ГіГ§ГЄГЁ Г¬Г®Г¤ГіГ«Гї: ") .. path)
+        print(("Ошибка загрузки модуля: ") .. path)
         return nil
     end
 end
 
--- ====================== Г€ГЌГ€Г–Г€ГЂГ‹Г€Г‡ГЂГ–Г€Гџ ======================
--- Г‘Г®Г§Г¤Г ВёГ¬ ГЎГ Г§Г®ГўГіГѕ Г±ГІГ°ГіГЄГІГіГ°Гі Defency
+-- ====================== ИНИЦИАЛИЗАЦИЯ ======================
+-- Создаём базовую структуру Defency
 Defency = {
     version = thisScript().version,
     lib_dir = lib_dir,
@@ -214,12 +214,12 @@ Defency = {
     UI = {}
 }
 
--- ГЏГ°Г®ГўГҐГ°ГїГҐГ¬ ГЁ Г§Г ГЈГ°ГіГ¦Г ГҐГ¬ Г®ГІГ±ГіГІГ±ГІГўГіГѕГ№ГЁГҐ ГґГ Г©Г«Г»
+-- Проверяем и загружаем отсутствующие файлы
 if not check_and_download_missing_files() then
-    print("Г‚Г­ГЁГ¬Г Г­ГЁГҐ: Г­ГҐ ГўГ±ГҐ ГґГ Г©Г«Г» ГЎГ»Г«ГЁ Г§Г ГЈГ°ГіГ¦ГҐГ­Г». ГЌГҐГЄГ®ГІГ®Г°Г»ГҐ ГґГіГ­ГЄГ¶ГЁГЁ Г¬Г®ГЈГіГІ Г­ГҐ Г°Г ГЎГ®ГІГ ГІГј.")
+    print("Внимание: не все файлы были загружены. Некоторые функции могут не работать.")
 end
 
--- Г‡Г ГЈГ°ГіГ¦Г ГҐГ¬ Г¬Г®Г¤ГіГ«ГЁ ГЁГ§ ГЇГ®Г«ГјГ§Г®ГўГ ГІГҐГ«ГјГ±ГЄГ®Г© ГЇГ ГЇГЄГЁ
+-- Загружаем модули из пользовательской папки
 Defency.Config  = safe_load("lib.DefencyHelper.config")
 Defency.Utils   = safe_load("lib.DefencyHelper.utils")
 Defency.Themes  = safe_load("lib.DefencyHelper.themes")
@@ -242,12 +242,12 @@ end
 function main()
     while not isSampAvailable() do wait(100) end
 
-    -- Г‡Г ГЈГ°ГіГ¦Г ГҐГ¬ Г­Г Г±ГІГ°Г®Г©ГЄГЁ
+    -- Загружаем настройки
     if Defency.Config and Defency.Config.Load then
         Defency.Config.Load()
     else
-        -- Г‘Г®Г§Г¤Г ВёГ¬ Г¤ГҐГґГ®Г«ГІГ­Г»ГҐ Г­Г Г±ГІГ°Г®Г©ГЄГЁ ГҐГ±Г«ГЁ ГЄГ®Г­ГґГЁГЈ Г­ГҐ Г§Г ГЈГ°ГіГ§ГЁГ«Г±Гї
-        print("Г‚Г­ГЁГ¬Г Г­ГЁГҐ: ГЁГ±ГЇГ®Г«ГјГ§ГіГҐГІГ±Гї ГЄГ®Г­ГґГЁГЈ ГЇГ® ГіГ¬Г®Г«Г·Г Г­ГЁГѕ")
+        -- Создаём дефолтные настройки если конфиг не загрузился
+        print("Внимание: используется конфиг по умолчанию")
         Defency.settings = {
             general = {
                 custom_dpi = 1.0,
@@ -258,25 +258,25 @@ function main()
         }
     end
 
-    -- ГЏГ°ГЁГ¬ГҐГ­ГїГҐГ¬ ГІГҐГ¬Гі
+    -- Применяем тему
     if Defency.Themes and Defency.Themes.ApplyCurrent then 
         Defency.Themes.ApplyCurrent() 
     end
 
-    -- Г€Г­ГЁГ¶ГЁГ Г«ГЁГ§ГЁГ°ГіГҐГ¬ ГёГ°ГЁГґГІГ»
+    -- Инициализируем шрифты
     if Defency.Themes and Defency.Themes.InitFonts then
         Defency.Themes.InitFonts()
     end
 
-    print("Defency Helper | ГѓГ®ГІГ®Гў ГЄ Г°Г ГЎГ®ГІГҐ!")
+    print("Defency Helper | Готов к работе!")
 
     while true do
         wait(0)
     end
 end
 
--- ====================== ImGui ГђГҐГЈГЁГ±ГІГ°Г Г¶ГЁГї Г®ГЄГ®Г­ ======================
--- ГђГҐГЈГЁГ±ГІГ°ГЁГ°ГіГҐГ¬ ГўГ±ГҐ UI Г®ГЄГ­Г  Г¤Г«Гї Г®ГІГ®ГЎГ°Г Г¦ГҐГ­ГЁГї
+-- ====================== ImGui Регистрация окон ======================
+-- Регистрируем все UI окна для отображения
 for name, mod in pairs(Defency.UI) do
     if type(mod) == "table" and mod.Window and mod.Draw then
         local m = mod
