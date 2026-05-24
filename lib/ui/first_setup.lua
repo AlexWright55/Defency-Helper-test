@@ -7,17 +7,18 @@ M.fraction = nil
 M.nick = nil
 M.name_surname = nil
 M.sex = nil
-
-local fractions = nil
+M.fractions = nil
+M.initialized = false
 
 local function EnsureInit()
-    if M.Window then return end
+    if M.initialized then return end
+    M.initialized = true
     M.Window = imgui.new.bool(false)
     M.fraction = imgui.new.int(0)
-    M.nick = imgui.new.char[64]("")
-    M.name_surname = imgui.new.char[64]("")
+    M.nick = imgui.new.char[64]()
+    M.name_surname = imgui.new.char[64]()
     M.sex = imgui.new.int(0)
-    fractions = { u8("ФПС"), u8("Армия"), u8("Другое") }
+    M.fractions = { u8("ФПС"), u8("Армия"), u8("Другое") }
 end
 
 function M.Show()
@@ -27,7 +28,9 @@ function M.Show()
 end
 
 function M.Draw()
-    EnsureInit()
+    if not M.initialized then return end
+    if not M.Window or not M.Window[0] then return end
+
     imgui.SetNextWindowSize(imgui.ImVec2(520, 400), imgui.Cond.Always)
     imgui.Begin(u8("Первоначальная настройка Defency Helper"), M.Window, imgui.WindowFlags.NoResize)
 
@@ -36,7 +39,7 @@ function M.Draw()
 
     if M.step == 1 then
         imgui.Text(u8("1. Выберите вашу фракцию:"))
-        imgui.Combo("##frac", M.fraction, fractions)
+        imgui.Combo("##frac", M.fraction, M.fractions)
 
         if imgui.Button(u8("Далее"), imgui.ImVec2(-1, 40)) then
             M.step = 2
@@ -56,21 +59,17 @@ function M.Draw()
         end
         imgui.SameLine()
         if imgui.Button(u8("Сохранить настройки"), imgui.ImVec2(-1, 40)) then
-            if Defency.Config then
-                local nick = u8:decode(ffi.string(M.nick))
-                local name = u8:decode(ffi.string(M.name_surname))
+            if Defency and Defency.Config then
+                local ok1, nick = pcall(function() return u8:decode(ffi.string(M.nick)) end)
+                local ok2, name = pcall(function() return u8:decode(ffi.string(M.name_surname)) end)
 
-                Defency.Config.settings.player_info.nick = nick
-                Defency.Config.settings.player_info.name_surname = name
+                if ok1 then Defency.Config.settings.player_info.nick = nick end
+                if ok2 then Defency.Config.settings.player_info.name_surname = name end
+
                 Defency.Config.settings.player_info.sex = (M.sex[0] == 0) and "Мужской" or "Женский"
 
-                if M.fraction[0] == 0 then
-                    Defency.Config.settings.general.fraction_mode = "prison"
-                elseif M.fraction[0] == 1 then
-                    Defency.Config.settings.general.fraction_mode = "army"
-                else
-                    Defency.Config.settings.general.fraction_mode = "none"
-                end
+                local modes = { "prison", "army", "none" }
+                Defency.Config.settings.general.fraction_mode = modes[M.fraction[0] + 1] or "none"
 
                 Defency.Config.Save()
             end
