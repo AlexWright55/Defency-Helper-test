@@ -258,6 +258,16 @@ function main()
         }
     end
 
+        -- Показываем первоначальную настройку если нужно
+    if Defency.Config and Defency.Config.needs_first_setup then
+        if Defency.UI and Defency.UI.FirstSetup then
+            lua_thread.create(function()
+                wait(1000)
+                Defency.UI.FirstSetup.Show()
+            end)
+        end
+    end
+
     -- Применяем тему
     if Defency.Themes and Defency.Themes.ApplyCurrent then 
         Defency.Themes.ApplyCurrent() 

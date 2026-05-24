@@ -7,6 +7,8 @@ local M = {}
 local config_dir = nil
 local settings_path = nil
 
+M.needs_first_setup = false
+
 local function EnsurePaths()
     if config_dir then return end
     config_dir = Defency.data_dir or (getWorkingDirectory():gsub('\\', '/') .. "/DefencyHelper")
@@ -64,14 +66,8 @@ function M.Load()
         print("Defency Helper | Первый запуск. Создаём настройки...")
         M.settings = M.default_settings
         M.Save()
-
-        -- Запускаем окно первоначальной настройки
-        if Defency and Defency.UI and Defency.UI.FirstSetup then
-            lua_thread.create(function()
-                wait(500)
-                Defency.UI.FirstSetup.Show()
-            end)
-        end
+        -- Ставим флаг — главный скрипт вызовет FirstSetup после загрузки всех модулей
+        M.needs_first_setup = true
         return
     end
 
