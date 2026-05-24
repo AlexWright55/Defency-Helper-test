@@ -3,10 +3,16 @@ local M = {}
 
 M.FONT = nil
 
+local function get_dpi()
+    if Defency and Defency.settings and Defency.settings.general then
+        return Defency.settings.general.custom_dpi or 1.0
+    end
+    return 1.0
+end
+
 local function apply_dark_theme()
-    -- Убираем imgui.SwitchContext() - он не нужен здесь
     local style = imgui.GetStyle()
-    local dpi = Defency.settings.general.custom_dpi or 1.0
+    local dpi = get_dpi()
 
     style.WindowPadding = imgui.ImVec2(8 * dpi, 8 * dpi)
     style.FramePadding = imgui.ImVec2(6 * dpi, 5 * dpi)
@@ -45,7 +51,7 @@ end
 
 local function apply_white_theme()
     local style = imgui.GetStyle()
-    local dpi = Defency.settings.general.custom_dpi or 1.0
+    local dpi = get_dpi()
 
     style.WindowPadding = imgui.ImVec2(8 * dpi, 8 * dpi)
     style.FramePadding = imgui.ImVec2(6 * dpi, 5 * dpi)
@@ -82,24 +88,26 @@ local function apply_white_theme()
     colors[imgui.Col.SliderGrab]        = imgui.ImVec4(0.25, 0.65, 0.95, 1.00)
 end
 
--- MoonMonet (динамическая тема)
 local function apply_moonmonet_theme()
-    if not moon_monet then 
+    if not moon_monet then
         apply_dark_theme()
-        return 
+        return
     end
-    local generated = moon_monet.buildColors(Defency.settings.general.moonmonet_theme_color, 1.0, true)
-    -- Здесь нужно адаптировать generated цвета под ImGui
-    -- Пока используем dark тему как fallback
+    local color = (Defency.settings and Defency.settings.general and Defency.settings.general.moonmonet_theme_color) or 12434877
+    local generated = moon_monet.buildColors(color, 1.0, true)
     apply_dark_theme()
 end
 
 function M.ApplyCurrent()
-    -- Проверяем, что ImGui инициализирован
     if not imgui or not imgui.GetStyle then
         return
     end
-    
+
+    if not Defency or not Defency.settings or not Defency.settings.general then
+        apply_dark_theme()
+        return
+    end
+
     local theme = Defency.settings.general.helper_theme
 
     if theme == 0 and moon_monet then
@@ -109,7 +117,7 @@ function M.ApplyCurrent()
     elseif theme == 2 then
         apply_white_theme()
     else
-        apply_dark_theme() -- дефолт
+        apply_dark_theme()
     end
 end
 
@@ -117,12 +125,13 @@ function M.InitFonts()
     if not imgui or not imgui.GetIO then
         return
     end
-    
+
     local io = imgui.GetIO()
     if io and io.Fonts then
+        local dpi = get_dpi()
         M.FONT = io.Fonts:AddFontFromFileTTF(
-            getWorkingDirectory() .. '\\fonts\\Trebuchet MS.ttf', 
-            14 * (Defency.settings.general.custom_dpi or 1.0)
+            getWorkingDirectory() .. '\\fonts\\Trebuchet MS.ttf',
+            14 * dpi
         )
         if not M.FONT then
             M.FONT = io.Fonts:AddFontDefault()
@@ -132,14 +141,15 @@ end
 
 function M.GetHelperIcon()
     local icons = {
-        police = fa.BUILDING_SHIELD,
-        army   = fa.BUILDING_SHIELD,
-        prison = fa.BUILDING_SHIELD,
+        police   = fa.BUILDING_SHIELD,
+        army     = fa.BUILDING_SHIELD,
+        prison   = fa.BUILDING_SHIELD,
         hospital = fa.HOSPITAL,
-        gov    = fa.BUILDING_COLUMNS,
-        none   = fa.BUILDING
+        gov      = fa.BUILDING_COLUMNS,
+        none     = fa.BUILDING
     }
-    return icons[Defency.settings.general.fraction_mode] or fa.BUILDING
+    local mode = (Defency.settings and Defency.settings.general and Defency.settings.general.fraction_mode) or "none"
+    return icons[mode] or fa.BUILDING
 end
 
 return M
