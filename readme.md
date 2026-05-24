@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Проводник — Портфолио</title>
+    <title>Проводник — Defency Helper</title>
     <style>
         :root {
             --bg: #f0f0f0;
@@ -21,7 +21,6 @@
             --ribbon-bg: #fafafa;
             --card-white: #fff;
             --danger: #c42b1c;
-            --green: #107c10;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -209,6 +208,7 @@
         .loading-spinner {
             display: flex; align-items: center; justify-content: center;
             padding: 40px; color: var(--muted); font-size: 14px; gap: 10px;
+            grid-column: 1 / -1;
         }
         .spinner {
             width: 24px; height: 24px; border: 3px solid #e0e0e0;
@@ -255,28 +255,91 @@
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
 
-        /* Breadcrumb dropdown */
+        /* Breadcrumb */
         .breadcrumb-nav {
             display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
         }
-        .repo-indicator {
-            font-size: 11px; background: #e8f4fd; padding: 3px 8px;
-            border-radius: 10px; color: var(--accent); font-weight: 500;
-        }
 
-        /* File preview tooltip */
-        .file-preview {
-            display: none;
+        /* File Viewer Modal */
+        .file-viewer {
             position: fixed;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 12px 16px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-            z-index: 1000;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .file-viewer-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(2px);
+        }
+        .file-viewer-window {
+            position: relative;
+            width: 85%;
+            max-width: 900px;
+            height: 80%;
+            background: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: viewerIn 0.2s ease;
+        }
+        @keyframes viewerIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .file-viewer-titlebar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: #2d2d2d;
+            color: #ccc;
+            font-size: 13px;
+            border-bottom: 1px solid #444;
+        }
+        .file-viewer-titlebar button {
+            background: transparent;
+            border: 1px solid #555;
+            color: #ccc;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
             font-size: 12px;
-            pointer-events: none;
-            max-width: 250px;
+            transition: all 0.1s;
+        }
+        .file-viewer-titlebar button:hover {
+            background: #444;
+            color: white;
+        }
+        .file-viewer-content {
+            flex: 1;
+            overflow: auto;
+            padding: 16px;
+        }
+        .file-viewer-content pre {
+            margin: 0;
+            font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #d4d4d4;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .file-viewer-content code {
+            background: transparent;
+            padding: 0;
+        }
+        .file-viewer-status {
+            padding: 4px 16px;
+            background: #007acc;
+            color: white;
+            font-size: 11px;
+            text-align: right;
         }
     </style>
 </head>
@@ -286,7 +349,7 @@
     <div class="titlebar">
         <div class="titlebar-left">
             <span class="titlebar-icon">📁</span>
-            <span class="titlebar-title">Проводник</span>
+            <span class="titlebar-title">Проводник — Defency Helper</span>
         </div>
         <div class="titlebar-controls">
             <button class="titlebar-btn">─</button>
@@ -305,7 +368,7 @@
             <button class="ribbon-btn" onclick="refreshFiles()" title="Обновить">
                 <span class="icon">🔄</span> Обновить
             </button>
-            <button class="ribbon-btn" onclick="window.open(repoUrl, '_blank')" title="Открыть на GitHub">
+            <button class="ribbon-btn" onclick="window.open(REPO_URL, '_blank')" title="Открыть на GitHub">
                 <span class="icon">🐙</span> GitHub
             </button>
         </div>
@@ -352,7 +415,7 @@
             <div class="sidebar-separator"></div>
             <div class="sidebar-section">
                 <div class="sidebar-title">Ссылки</div>
-                <div class="sidebar-item" onclick="window.open(repoUrl, '_blank')">
+                <div class="sidebar-item" onclick="window.open(REPO_URL, '_blank')">
                     <span class="icon">🐙</span> Репозиторий
                 </div>
                 <div class="sidebar-item" onclick="window.open('https://pages.github.com', '_blank')">
@@ -396,50 +459,63 @@
         </div>
     </div>
 
-    <!-- File Preview Tooltip -->
-    <div class="file-preview" id="filePreview"></div>
+    <!-- File Viewer Modal -->
+    <div class="file-viewer" id="fileViewer">
+        <div class="file-viewer-overlay" onclick="closeFileViewer()"></div>
+        <div class="file-viewer-window">
+            <div class="file-viewer-titlebar">
+                <span id="viewerTitle">📄 file.txt</span>
+                <div style="display:flex;gap:4px;">
+                    <button onclick="copyFileContent()" title="Копировать">📋</button>
+                    <button onclick="window.open(window._currentViewerRawUrl, '_blank')" title="Raw">🔗</button>
+                    <button onclick="closeFileViewer()" title="Закрыть">✕</button>
+                </div>
+            </div>
+            <div class="file-viewer-content">
+                <pre><code id="viewerCode" class="language-plaintext">Загрузка...</code></pre>
+            </div>
+            <div class="file-viewer-status">
+                <span id="viewerStatus">Загрузка...</span>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // ==================== КОНФИГУРАЦИЯ ====================
-        // Укажи свой репозиторий вручную:
-        const REPO_OWNER = 'AlexWright55';   // ← замени на свой GitHub username
-        const REPO_NAME = 'Defency-Helper-test';  // ← замени на название репозитория
-        const REPO_BRANCH = 'main';            // или 'master'
+        // ==================== НАСТРОЙКИ — УКАЖИ СВОИ ДАННЫЕ ====================
+        const REPO_OWNER = 'AlexWright55';
+        const REPO_NAME = 'Defency-Helper-test';
+        const REPO_BRANCH = 'main';
 
-        // Автоопределение (если сайт на username.github.io)
-        const hostname = window.location.hostname;
-        let finalOwner = REPO_OWNER;
-        let finalRepo = REPO_NAME;
-
-        if (hostname.includes('github.io')) {
-            finalOwner = hostname.split('.')[0];
-            finalRepo = hostname.split('.')[0] + '.github.io';
-        }
-
-        const API_BASE = `https://api.github.com/repos/${finalOwner}/${finalRepo}`;
-        const RAW_BASE = `https://raw.githubusercontent.com/${finalOwner}/${finalRepo}/${REPO_BRANCH}`;
-        const repoUrl = `https://github.com/${finalOwner}/${finalRepo}`;
+        // ==================== НЕ ТРОГАЙ НИЖЕ (всё строится автоматом) ====================
+        const API_BASE = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`;
+        const RAW_BASE = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${REPO_BRANCH}`;
+        const REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
 
         // ==================== СОСТОЯНИЕ ====================
-        let currentPath = '';               // текущий путь внутри репо
+        let currentPath = '';
         let navigationHistory = [''];
         let historyIndex = 0;
         let allFiles = [];
         let selectedFiles = new Set();
+        window._currentViewerRawUrl = '';
 
         // ==================== ЗАГРУЗКА ФАЙЛОВ ====================
         async function fetchFiles(path = '') {
             const url = `${API_BASE}/contents/${path}`;
+            console.log('🔄 Загрузка:', url);
             try {
                 const response = await fetch(url, {
                     headers: { 'Accept': 'application/vnd.github.v3+json' }
                 });
-                if (!response.ok) throw new Error(`Ошибка ${response.status}`);
+                if (!response.ok) {
+                    console.error('❌ Ошибка ответа:', response.status, response.statusText);
+                    throw new Error(`Ошибка ${response.status}: ${response.statusText}`);
+                }
                 const data = await response.json();
-                // Если вернулся не массив (один файл) — оборачиваем
+                console.log('✅ Загружено элементов:', Array.isArray(data) ? data.length : 1);
                 return Array.isArray(data) ? data : [data];
             } catch (error) {
-                console.error('Ошибка загрузки:', error);
+                console.error('❌ Ошибка загрузки:', error);
                 return [];
             }
         }
@@ -491,11 +567,11 @@
 
             if (filteredFiles.length === 0) {
                 grid.innerHTML = `
-                    <div class="loading-spinner" style="grid-column: 1/-1;">
+                    <div class="loading-spinner">
                         ${searchQuery ? '🔍 Ничего не найдено' : '📭 Папка пуста'}
                     </div>`;
             } else {
-                // Сортируем: папки сверху, потом файлы, по алфавиту
+                // Сортируем: папки сверху, потом по алфавиту
                 filteredFiles.sort((a, b) => {
                     if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
                     return a.name.localeCompare(b.name);
@@ -505,14 +581,14 @@
                     const icon = getFileIcon(file);
                     const meta = file.type === 'dir' ? 'Папка' : formatSize(file.size);
                     const isSelected = selectedFiles.has(file.path);
+                    // Экранируем путь для data-атрибута
+                    const escapedPath = file.path.replace(/'/g, "\\'");
                     return `
                         <div class="file-item ${isSelected ? 'selected' : ''}"
-                             data-path="${file.path}"
+                             data-path="${escapedPath}"
                              data-type="${file.type}"
-                             data-name="${file.name}"
-                             onclick="handleFileClick(event, '${file.path}', '${file.type}')"
-                             ondblclick="handleFileDoubleClick('${file.path}', '${file.type}')"
-                             oncontextmenu="return false;"
+                             onclick="handleFileClick(event, '${escapedPath}', '${file.type}')"
+                             ondblclick="handleFileDoubleClick('${escapedPath}', '${file.type}')"
                              tabindex="0">
                             <span class="file-icon">${icon}</span>
                             <span class="file-name">${file.name}</span>
@@ -531,7 +607,6 @@
         // ==================== НАВИГАЦИЯ ====================
         async function navigateTo(path) {
             path = path || '';
-            // Обновляем историю
             if (historyIndex < navigationHistory.length - 1) {
                 navigationHistory = navigationHistory.slice(0, historyIndex + 1);
             }
@@ -584,7 +659,7 @@
             let accumulatedPath = '';
             parts.forEach((part, i) => {
                 accumulatedPath += (accumulatedPath ? '/' : '') + part;
-                html += ` <span class="path-arrow">▸</span> `;
+                html += ' <span class="path-arrow">▸</span> ';
                 if (i === parts.length - 1) {
                     html += `<span class="path-segment current">📁 ${part}</span>`;
                 } else {
@@ -592,7 +667,6 @@
                 }
             });
             document.getElementById('breadcrumbNav').innerHTML = html;
-
             const label = currentPath
                 ? `📂 ${currentPath.split('/').pop()}`
                 : '📂 Корень проекта';
@@ -602,14 +676,9 @@
         async function loadCurrentDirectory(addToHistory = true) {
             const grid = document.getElementById('filesGrid');
             grid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Загрузка...</div>';
-
             allFiles = await fetchFiles(currentPath);
             selectedFiles.clear();
             renderFiles(allFiles);
-
-            if (!addToHistory) {
-                // Уже добавлено в историю
-            }
         }
 
         function refreshFiles() {
@@ -619,18 +688,7 @@
         // ==================== ВЫДЕЛЕНИЕ И КЛИКИ ====================
         function handleFileClick(event, path, type) {
             const item = event.currentTarget;
-
             if (event.ctrlKey || event.metaKey) {
-                // Мультивыделение
-                if (selectedFiles.has(path)) {
-                    selectedFiles.delete(path);
-                    item.classList.remove('selected');
-                } else {
-                    selectedFiles.add(path);
-                    item.classList.add('selected');
-                }
-            } else if (event.shiftKey && selectedFiles.size > 0) {
-                // Range selection (упрощённо)
                 if (selectedFiles.has(path)) {
                     selectedFiles.delete(path);
                     item.classList.remove('selected');
@@ -639,7 +697,6 @@
                     item.classList.add('selected');
                 }
             } else {
-                // Обычный клик
                 document.querySelectorAll('.file-item').forEach(el => el.classList.remove('selected'));
                 selectedFiles.clear();
                 selectedFiles.add(path);
@@ -648,20 +705,93 @@
             updateSelectionCount();
         }
 
-        function handleFileDoubleClick(path, type) {
+        async function handleFileDoubleClick(path, type) {
             if (type === 'dir') {
                 navigateTo(path);
-            } else {
-                // Открыть файл — показать raw-ссылку
-                const rawUrl = `${RAW_BASE}/${path}`;
-                window.open(rawUrl, '_blank');
-                // Визуальная обратная связь
-                const item = document.querySelector(`[data-path="${path}"]`);
-                if (item) {
-                    item.style.background = '#cce4f7';
-                    setTimeout(() => { item.style.background = ''; }, 500);
-                }
+                return;
             }
+
+            const rawUrl = `${RAW_BASE}/${path}`;
+            window._currentViewerRawUrl = rawUrl;
+
+            const textExtensions = [
+                'txt', 'md', 'html', 'htm', 'css', 'js', 'jsx', 'ts', 'tsx',
+                'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'cfg',
+                'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp',
+                'sh', 'bat', 'ps1', 'sql', 'r', 'go', 'rs', 'swift',
+                'kt', 'scala', 'lua', 'pl', 'pm', 'vue', 'svelte',
+                'gitignore', 'env', 'editorconfig', 'prettierrc', 'eslintrc',
+                'lock', 'log', 'csv', 'svg'
+            ];
+
+            const ext = path.split('.').pop().toLowerCase();
+            const name = path.split('/').pop();
+
+            const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico'];
+            if (imageExtensions.includes(ext)) {
+                window.open(rawUrl, '_blank');
+                return;
+            }
+
+            if (textExtensions.includes(ext) || textExtensions.includes(name)) {
+                openFileViewer(name, rawUrl);
+                return;
+            }
+
+            window.open(rawUrl, '_blank');
+        }
+
+        async function openFileViewer(filename, url) {
+            const viewer = document.getElementById('fileViewer');
+            const codeEl = document.getElementById('viewerCode');
+            const titleEl = document.getElementById('viewerTitle');
+            const statusEl = document.getElementById('viewerStatus');
+
+            viewer.style.display = 'flex';
+            titleEl.textContent = `📄 ${filename}`;
+            codeEl.textContent = 'Загрузка...';
+            statusEl.textContent = 'Загрузка...';
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Ошибка загрузки');
+                const text = await response.text();
+                codeEl.textContent = text;
+
+                const ext = filename.split('.').pop().toLowerCase();
+                const langMap = {
+                    'js': 'javascript', 'jsx': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
+                    'py': 'python', 'rb': 'ruby', 'java': 'java', 'c': 'c', 'cpp': 'cpp',
+                    'css': 'css', 'html': 'html', 'json': 'json', 'xml': 'xml',
+                    'sh': 'bash', 'bat': 'batch', 'sql': 'sql', 'go': 'go', 'rs': 'rust',
+                    'md': 'markdown', 'yaml': 'yaml', 'yml': 'yaml', 'toml': 'toml',
+                };
+                codeEl.className = `language-${langMap[ext] || 'plaintext'}`;
+
+                const size = new Blob([text]).size;
+                const lines = text.split('\n').length;
+                statusEl.textContent = `${lines} строк(и) · ${formatSize(size)} · ${url}`;
+
+            } catch (error) {
+                codeEl.textContent = `Ошибка загрузки: ${error.message}`;
+                statusEl.textContent = 'Ошибка';
+            }
+        }
+
+        function closeFileViewer() {
+            document.getElementById('fileViewer').style.display = 'none';
+        }
+
+        function copyFileContent() {
+            const text = document.getElementById('viewerCode').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const statusEl = document.getElementById('viewerStatus');
+                const prevText = statusEl.textContent;
+                statusEl.textContent = '✅ Скопировано!';
+                setTimeout(() => {
+                    statusEl.textContent = prevText;
+                }, 1500);
+            });
         }
 
         function updateSelectionCount() {
@@ -680,7 +810,6 @@
             const grid = document.getElementById('filesGrid');
             const buttons = document.querySelectorAll('.view-btn');
             buttons.forEach(b => b.classList.remove('active'));
-
             if (view === 'list') {
                 grid.classList.add('list-view');
                 buttons[1].classList.add('active');
@@ -702,8 +831,8 @@
 
         // ==================== КЛАВИАТУРА ====================
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Delete' && selectedFiles.size > 0) {
-                alert('🗑️ Удаление отключено (это же просто проводник 😄)');
+            if (e.key === 'Escape') {
+                closeFileViewer();
             }
             if (e.key === 'Backspace' && document.activeElement === document.body) {
                 navigateUp();
@@ -734,9 +863,10 @@
 
         // ==================== ЗАПУСК ====================
         async function init() {
-            console.log(`🪟 Проводник запущен`);
-            console.log(`📁 Репозиторий: ${finalOwner}/${finalRepo}`);
-            console.log(`🌐 API: ${API_BASE}`);
+            console.log('🪟 Проводник запущен');
+            console.log('📁 Репозиторий:', `${REPO_OWNER}/${REPO_NAME}`);
+            console.log('🌐 API:', API_BASE);
+            console.log('📄 Raw:', RAW_BASE);
             await loadCurrentDirectory();
         }
 
